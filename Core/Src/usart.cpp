@@ -246,6 +246,7 @@ CPortM::CPortM() :
    m_buffRX = new uint8_t[USART_DMA_BFF_LEN];      // 64 BYTE
    pBuffRX_MA = (uint8_t *)&(m_buffRX[0]);
    pBuffRX_MB = (uint8_t *)&(m_buffRX[m_RxPackLen]);
+   sz = 64;
 }
 
 CPortM::~CPortM()
@@ -256,7 +257,7 @@ CPortM::~CPortM()
 
 void CPortM::onInit(void)
 {
-   dma = hdma_usart2_rx.Instance;
+   dma = DMA1_Stream5;
    huart2.Instance = USART2;
    huart2.Init.BaudRate = onGetUART_BPS();
    huart2.Init.WordLength = UART_WORDLENGTH_8B;
@@ -296,15 +297,24 @@ bool CPortM::onRead(uint8_t *data, uint16_t &len)
 {
    ///if(HAL_UART_Receive(&huart2, m_buffRX, len, 100) == HAL_OK) return true;
    ///return false;
-
-   uint16_t pos = sz - dma->NDTR;
+   
+   uint16_t pos = sz - DMA1_Stream5->NDTR;
    if(pos == last) return false;
-
+   
+   printf("RX: sz=%d, NDTR=%d\n", sz, DMA1_Stream5->NDTR);
    if(pos > last)
    {
       data = &buf[last];
       len = pos - last;
       last = pos;
+      ///printf("File %s on line %d\r\n", file, line);
+      printf("ModbusRX: pos=%d, len=%d\n", pos, len);
+      for (int i = 0; i < len; i++)
+      {
+         printf("0x%02X, ", (int)data[i]);
+      };
+      printf("\r\n");
+      
       return true;
    }
    else
