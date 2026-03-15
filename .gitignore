@@ -1,0 +1,66 @@
+# build folders
+build/
+cmake-build-*/
+
+# compiled files
+*.o
+*.obj
+*.exe
+*.out
+*.elf
+*.bin
+*.hex
+
+# libraries
+*.a
+*.so
+*.dll
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# logs
+*.log
+
+desktop.ini
+Thumbs.db
+*.txt
+*.ewd
+*.ewp
+*.ewt
+*.eww
+*.pbd
+*.pbi
+
+*.ioc
+*.mxproject
+*.map
+*.list
+*.d
+*.su
+Debug/
+Release/
+BrowseInfo/
+Exe/
+List/
+Obj/
+settings/
+C-B/
+
+.IAR-code-forNFC_build_cache
+.ninja_deps
+.ninja_log
+
+*.wsdt
+*.wsdt
+*.wsdt
+*.wsdt
+*.dnx
+*.pbi
+*.pbw
+
