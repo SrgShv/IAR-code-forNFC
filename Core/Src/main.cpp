@@ -952,6 +952,9 @@ uint8_t tdat[10];
 uint8_t rdat[100];
 uint16_t rxLenMBR = 0;
 dPTR pD;
+
+uint8_t MBRrx[64];
+uint16_t MBRlen = 0;
 int main(void)
 {
    onMainInit();
@@ -962,63 +965,67 @@ int main(void)
    {
       /*********************************************************************/
       /** RX PIN USART2 STATUS CONTROL                                     */
-      if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_2))
-      {
-         if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_3)) // if USART PIN:PA3 RX DATA
-         {
-            if(RXF1 == false) RXF1 = true;
-         };
-      };
+//      if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_2))
+//      {
+//         if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_3)) // if USART PIN:PA3 RX DATA
+//         {
+//            if(RXF1 == false) RXF1 = true;
+//         };
+//      };
 
       /** RX PIN USART2 STATUS CONTROL                                     */
       /*********************************************************************/
+     while(pPortMB->onRead(MBRrx, MBRlen))
+     {
+       if(MBRlen > 0) printf("rx\r\n");
+     };
 
-      if(USART_RXA)                    /** <= HAL_UART_RxHalfCpltCallback **/
-      {
-         USART_RXA = false;
-         mBuffUART.onWrite(pBuffRX_MA, 8);   // copy from pBuffRX_MA -> to mBuffUART.m_Buff[][]
-         if(RXF1 == true) RXF1 = false;
-      };
+//      if(USART_RXA)                    /** <= HAL_UART_RxHalfCpltCallback **/
+//      {
+//         USART_RXA = false;
+//         mBuffUART.onWrite(pBuffRX_MA, 8);   // copy from pBuffRX_MA -> to mBuffUART.m_Buff[][]
+//         if(RXF1 == true) RXF1 = false;
+//      };
 
-      if(USART_RXB)                    /** <= HAL_UART_RxCpltCallback **/
-      {
-         USART_RXB = false;
-         mBuffUART.onWrite(pBuffRX_MB, 8);   // copy from pBuffRX_MA -> to mBuffUART.m_Buff[][]
-         pPortMB->onSetRX(16);
-         if(RXF1 == true) RXF1 = false;
-      };
+//      if(USART_RXB)                    /** <= HAL_UART_RxCpltCallback **/
+//      {
+//         USART_RXB = false;
+//         mBuffUART.onWrite(pBuffRX_MB, 8);   // copy from pBuffRX_MA -> to mBuffUART.m_Buff[][]
+//         pPortMB->onSetRX(16);
+//         if(RXF1 == true) RXF1 = false;
+//      };
       
-      if(oRXF1 != RXF1)
-      {
-         oRXF1 = RXF1;
-         if(RXF1 == true) mTimeCtrlRX.onStart(5, 9);
-         else mTimeCtrlRX.onStop();
-         //printf("UX+\r\n");
-      };
+//      if(oRXF1 != RXF1)
+//      {
+//         oRXF1 = RXF1;
+//         if(RXF1 == true) mTimeCtrlRX.onStart(5, 9);
+//         else mTimeCtrlRX.onStop();
+//         //printf("UX+\r\n");
+//      };
 
-      if(mBuffUART.onCheck())
-      {
-         mBuffUART.onDirectRead(pD);
-         /** parse RX from RS485, 0 delay **/
-         if(ParseModbusRX(pD.data, *pD.byteCount))
-         {
-            SysResetCounter = 0;
-         };
-      };
+//      if(mBuffUART.onCheck())
+//      {
+//         mBuffUART.onDirectRead(pD);
+//         /** parse RX from RS485, 0 delay **/
+//         if(ParseModbusRX(pD.data, *pD.byteCount))
+//         {
+//            SysResetCounter = 0;
+//         };
+//      };
 
-      if(mTimeCtrlRX.onIsTimeOut())
-      {
-         printf("URX-ERR\r\n");
-         if(RXF1 == true) RXF1 = false;
-         mTimeCtrlRX.onStop();
-         if(SysResetCounter > 2)
-         {
-            mBuffUART.onClear();
-            pPortMB->onClearFlgRX();
-         };
-         //if(++SysResetCounter > 5) SystemReset();
-         if(++SysResetCounter > 5) SystemResetD((char *)__FILE__, __LINE__);
-      };
+//      if(mTimeCtrlRX.onIsTimeOut())
+//      {
+//         printf("URX-ERR\r\n");
+//         if(RXF1 == true) RXF1 = false;
+//         mTimeCtrlRX.onStop();
+//         if(SysResetCounter > 2)
+//         {
+//            mBuffUART.onClear();
+//            pPortMB->onClearFlgRX();
+//         };
+//         //if(++SysResetCounter > 5) SystemReset();
+//         if(++SysResetCounter > 5) SystemResetD((char *)__FILE__, __LINE__);
+//      };
 
 /********************************************************************************/
 /**   START MAIN LOOP PERIOD 1 msec 1 msec 1 msec 1 msec 1 msec 1 msec 1 msec   */

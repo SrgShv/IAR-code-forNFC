@@ -52,7 +52,7 @@ extern CBuffUART *pBuffUART;
 //extern CTimeOut *pTimeEnRS485;
 extern void onStartTimer2(uint32_t time);
 
-#define USART_DMA_BFF_LEN     16
+#define USART_DMA_BFF_LEN     64
 uint8_t *pBuffRX_MA = 0;
 uint8_t *pBuffRX_MB = 0;
 volatile bool USART_RXA = false;
@@ -239,10 +239,11 @@ CPortM::CPortM() :
    m_buffTX(0),
    m_buffRX(0),
    m_RxPackLen(USART_DMA_BFF_LEN/2),               // 8 BYTE
-   m_delayTX(0)
+   m_delayTX(0),
+   last(0)
 {
-   m_buffTX = new uint8_t[USART_DMA_BFF_LEN];      // 16 BYTE
-   m_buffRX = new uint8_t[USART_DMA_BFF_LEN];      // 16 BYTE
+   m_buffTX = new uint8_t[USART_DMA_BFF_LEN];      // 64 BYTE
+   m_buffRX = new uint8_t[USART_DMA_BFF_LEN];      // 64 BYTE
    pBuffRX_MA = (uint8_t *)&(m_buffRX[0]);
    pBuffRX_MB = (uint8_t *)&(m_buffRX[m_RxPackLen]);
 }
@@ -255,6 +256,7 @@ CPortM::~CPortM()
 
 void CPortM::onInit(void)
 {
+   dma = hdma_usart2_rx.Instance;
    huart2.Instance = USART2;
    huart2.Init.BaudRate = onGetUART_BPS();
    huart2.Init.WordLength = UART_WORDLENGTH_8B;
@@ -290,10 +292,28 @@ void CPortM::onSend(uint8_t *data, uint16_t len)
 #endif
 }
 
-bool CPortM::onRead(uint8_t *data, uint16_t len)
+bool CPortM::onRead(uint8_t *data, uint16_t &len)
 {
-   if(HAL_UART_Receive(&huart2, m_buffRX, len, 100) == HAL_OK) return true;
-   return false;
+   ///if(HAL_UART_Receive(&huart2, m_buffRX, len, 100) == HAL_OK) return true;
+   ///return false;
+
+   uint16_t pos = sz - dma->NDTR;
+   if(pos == last) return false;
+
+   if(pos > last)
+   {
+      data = &buf[last];
+      len = pos - last;
+      last = pos;
+      return true;
+   }
+   else
+   {
+      data = &buf[last];
+      len = sz - last;
+      last = 0;
+      return true;
+   };
 }
 
 void CPortM::onSetRX(uint16_t RxPackLen)

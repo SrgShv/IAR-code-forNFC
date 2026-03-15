@@ -53,7 +53,7 @@ public:
    void onDeInit(void);
    void onClearFlgRX(void);
    void onSend(uint8_t *data, uint16_t len);
-   bool onRead(uint8_t *data, uint16_t len);
+   bool onRead(uint8_t *data, uint16_t &len);
    void onSetRX(uint16_t RxPackLen);
    uint16_t onGetRxLen(void);
 protected:
@@ -64,6 +64,11 @@ private:
    uint8_t *m_CrcRX;
    uint16_t m_RxPackLen;
    uint32_t m_delayTX;
+   
+   DMA_Stream_TypeDef* dma;
+   uint8_t* buf;
+   uint16_t sz;
+   uint16_t last;
 };
 
 class CByteBuff
