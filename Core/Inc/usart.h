@@ -26,9 +26,10 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
+#pragma once
 #include "main.h"
    
-#define USART_RX_BUFFER_SIZE     16
+#define USART_RX_BUFFER_SIZE     32
 
 extern UART_HandleTypeDef huart2;
 void MX_USART2_UART_Init(void);

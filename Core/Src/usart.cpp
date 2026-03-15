@@ -26,6 +26,24 @@ UART_HandleTypeDef huart2;
 DMA_HandleTypeDef hdma_usart2_tx;
 DMA_HandleTypeDef hdma_usart2_rx;
 
+/**
+settings:
+         USART:
+            Mode: DMA Circular
+            UART global interrupt: DISABLE
+         DMA:
+            Circular
+            Memory Increment ENABLE
+            Peripheral Increment DISABLE
+
+buffer:  __attribute__((aligned(32)))
+         uint8_t uart1_dma[1024];
+
+start:   HAL_UART_Receive_DMA(&huart2, buffer, 1024);
+         __IO uint32_t NDTR;
+         DMA1_Stream5->NDTR
+*/
+
 //extern CByteBuff *pBuffMB;
 extern CPortM *pPortMB;
 extern CBuffUART *pBuffUART;
@@ -114,7 +132,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
       hdma_usart2_rx.Init.MemInc = DMA_MINC_ENABLE;
       hdma_usart2_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
       hdma_usart2_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
-      hdma_usart2_rx.Init.Mode = DMA_NORMAL;
+      hdma_usart2_rx.Init.Mode = DMA_CIRCULAR;
       hdma_usart2_rx.Init.Priority = DMA_PRIORITY_LOW;
       hdma_usart2_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
       if (HAL_DMA_Init(&hdma_usart2_rx) != HAL_OK)
@@ -126,22 +144,22 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
 
       /* DMA interrupt init */
       /* DMA1_Stream5_IRQn interrupt configuration */
-      HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 1, 1);
-      HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);
+      ///HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 1, 1);
+      ///HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);
       /* DMA1_Stream6_IRQn interrupt configuration */
       HAL_NVIC_SetPriority(DMA1_Stream6_IRQn, 1, 2);
       HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);
 
       /* USART2 interrupt Init */
-      HAL_NVIC_SetPriority(USART2_IRQn, 1, 3);
-      HAL_NVIC_EnableIRQ(USART2_IRQn);
+      ///HAL_NVIC_SetPriority(USART2_IRQn, 1, 3);
+      ///HAL_NVIC_EnableIRQ(USART2_IRQn);
 
-      __HAL_UART_ENABLE_IT(&huart2, UART_IT_ERR);        // Активує переривання для помилок
-      __HAL_UART_ENABLE_IT(&huart2, UART_IT_RXNE);       // Для отримання даних
+      ///__HAL_UART_ENABLE_IT(&huart2, UART_IT_ERR);        // Активує переривання для помилок
+      ///__HAL_UART_ENABLE_IT(&huart2, UART_IT_RXNE);       // Для отримання даних
 
-      __HAL_DMA_ENABLE_IT(&hdma_usart2_rx, DMA_IT_TE);   // Помилка передачі
-      __HAL_DMA_ENABLE_IT(&hdma_usart2_rx, DMA_IT_HT);   // Половинне завершення
-      __HAL_DMA_ENABLE_IT(&hdma_usart2_rx, DMA_IT_TC);   // Завершення передачі
+      ///__HAL_DMA_ENABLE_IT(&hdma_usart2_rx, DMA_IT_TE);   // Помилка передачі
+      ///__HAL_DMA_ENABLE_IT(&hdma_usart2_rx, DMA_IT_HT);   // Половинне завершення
+      ///__HAL_DMA_ENABLE_IT(&hdma_usart2_rx, DMA_IT_TC);   // Завершення передачі
    }
 }
 
