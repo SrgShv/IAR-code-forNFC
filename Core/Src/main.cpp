@@ -102,10 +102,11 @@ CBuffUART mBuffUART(8, 25);
 CBuffUART *pBuffUART = &mBuffUART;
 
 CBuffer mBuffUSB(100, 2);
-//CByteBuff mBuffMB(255);
 
 CBuffer *pBuffUSB = &mBuffUSB;
-//CByteBuff *pBuffMB = &mBuffMB;
+
+CByteBuff mBuffMB(USART_RX_BUFFER_SIZE);
+CByteBuff *pBuffMB = &mBuffMB;
 
 CFlash mFlashM;
 CFlash *pFlashM = &mFlashM;
@@ -950,6 +951,8 @@ static volatile bool rxPIN1 = false;
 uint32_t timeOut_1 = 0;
 uint8_t tdat[10];
 uint8_t rdat[100];
+uint8_t rxBuffMBR[USART_RX_BUFFER_SIZE];
+uint16_t rxLenBuffMBR = 0;
 uint16_t rxLenMBR = 0;
 dPTR pD;
 
@@ -980,11 +983,12 @@ int main(void)
       {
          if(MBRlen > 0)
          {
+            pBuffMB->onAddData(MBRrx, MBRlen);
             //printf("ModbusRX: len=%d\n", MBRlen);
-            for (int i = 0; i < MBRlen; i++)
-            {
-               printf("0x%02X, \n\r", (int)MBRrx[i]);
-            };
+//            for (int i = 0; i < MBRlen; i++)
+//            {
+//               printf("0x%02X, \n\r", (int)MBRrx[i]);
+//            };
             pTimeEnRS485->onStart(2, 2);
             //printf("\r");
             //MBRlen = 0;
@@ -993,8 +997,18 @@ int main(void)
       
       if(pTimeEnRS485->onIsTimeOut())
       {
-         printf("<-->\n\r");
+         if(pBuffMB->onCheck())
+         {
+            pBuffMB->onCopyRX(rxBuffMBR, rxLenBuffMBR);
+         };
+         //printf("<-->\n\r");
          pTimeEnRS485->onStop();
+         printf("ModbusRX: len=%d\n", rxLenBuffMBR);
+         for (int i = 0; i < rxLenBuffMBR; i++)
+         {
+            printf("0x%02X, \n\r", (int)rxBuffMBR[i]);
+         };
+         pBuffMB->onClear();
       };
 
 //      if(USART_RXA)                    /** <= HAL_UART_RxHalfCpltCallback **/
@@ -1012,13 +1026,13 @@ int main(void)
 //         if(RXF1 == true) RXF1 = false;
 //      };
       
-      if(oRXF1 != RXF1)
-      {
-         oRXF1 = RXF1;
-         if(RXF1 == true) mTimeCtrlRX.onStart(5, 9);
-         else mTimeCtrlRX.onStop();
-         printf("USART_RX+\r\n");
-      };
+//      if(oRXF1 != RXF1)
+//      {
+//         oRXF1 = RXF1;
+//         if(RXF1 == true) mTimeCtrlRX.onStart(5, 9);
+//         else mTimeCtrlRX.onStop();
+//         printf("USART_RX+\r\n");
+//      };
 
 //      if(mBuffUART.onCheck())
 //      {
@@ -1151,6 +1165,7 @@ void onMainInit(void)
    HAL_Delay(100);
    PN532_Init();
    HAL_Delay(1000);
+   pBuffMB->onClear();
 
    pPortMB->onSetRX(USART_RX_BUFFER_SIZE);
 

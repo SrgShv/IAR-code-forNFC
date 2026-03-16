@@ -78,8 +78,10 @@ public:
    explicit CByteBuff(uint16_t len);
    ~CByteBuff();
 
+   void onAddData(uint8_t *data, uint16_t len);
    void onGetData(uint8_t *data, uint16_t len);
    bool onCheck(void);
+   void onClear(void);
    void onCopyRX(uint8_t *data, uint16_t &len);
 
 protected:

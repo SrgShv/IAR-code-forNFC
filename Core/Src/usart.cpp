@@ -420,6 +420,15 @@ CByteBuff::~CByteBuff()
    if(m_buffRX != 0) delete [] m_buffRX;
 }
 
+void CByteBuff::onAddData(uint8_t *data, uint16_t len)
+{
+   for(uint16_t i=0; i<len; i++)
+   {
+      m_buffRX[m_len++] = data[i];
+      if(m_len >= m_maxSz) break;
+   };
+}
+
 void CByteBuff::onGetData(uint8_t *data, uint16_t len)
 {
    if(len <= m_maxSz)
@@ -429,6 +438,18 @@ void CByteBuff::onGetData(uint8_t *data, uint16_t len)
       {
          m_buffRX[i] = data[i];
       };
+   };
+}
+
+void CByteBuff::onClear()
+{
+   if(m_len > 0)
+   {
+      for(uint16_t i=0; i<m_len; i++)
+      {
+         m_buffRX[i] = 0;
+      };
+      m_len = 0;
    };
 }
 
