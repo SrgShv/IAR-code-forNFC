@@ -158,12 +158,8 @@ void CTimeOut::onStop(void)
 
 bool CTimeOut::onIsTimeOut(void)
 {
-   bool res = false;
-   if(m_timeOutFlag == true)
-   {
-      res = true;
-   };
-   return res;
+   if(m_timeOutFlag == true) return true;
+   else return false;
 }
 
 bool CTimeOut::onIsActive(uint32_t ID)

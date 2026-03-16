@@ -953,7 +953,8 @@ uint8_t rdat[100];
 uint16_t rxLenMBR = 0;
 dPTR pD;
 
-uint8_t MBRrx[64];
+uint8_t MBRrx[USART_RX_BUFFER_SIZE];
+//uint8_t* MBRrx = NULL;
 uint16_t MBRlen = 0;
 int main(void)
 {
@@ -965,20 +966,36 @@ int main(void)
    {
       /*********************************************************************/
       /** RX PIN USART2 STATUS CONTROL                                     */
-//      if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_2))
-//      {
-//         if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_3)) // if USART PIN:PA3 RX DATA
-//         {
-//            if(RXF1 == false) RXF1 = true;
-//         };
-//      };
+      if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_2))
+      {
+         if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_3)) // if USART PIN:PA3 RX DATA
+         {
+            if(RXF1 == false) RXF1 = true;
+         };
+      };
 
       /** RX PIN USART2 STATUS CONTROL                                     */
       /*********************************************************************/
-     while(pPortMB->onRead(MBRrx, MBRlen))
-     {
-       if(MBRlen > 0) printf("rx\r\n");
-     };
+      while(pPortMB->onRead(MBRrx, MBRlen))
+      {
+         if(MBRlen > 0)
+         {
+            //printf("ModbusRX: len=%d\n", MBRlen);
+            for (int i = 0; i < MBRlen; i++)
+            {
+               printf("0x%02X, \n\r", (int)MBRrx[i]);
+            };
+            pTimeEnRS485->onStart(2, 2);
+            //printf("\r");
+            //MBRlen = 0;
+         };
+      };
+      
+      if(pTimeEnRS485->onIsTimeOut())
+      {
+         printf("<-->\n\r");
+         pTimeEnRS485->onStop();
+      };
 
 //      if(USART_RXA)                    /** <= HAL_UART_RxHalfCpltCallback **/
 //      {
@@ -995,13 +1012,13 @@ int main(void)
 //         if(RXF1 == true) RXF1 = false;
 //      };
       
-//      if(oRXF1 != RXF1)
-//      {
-//         oRXF1 = RXF1;
-//         if(RXF1 == true) mTimeCtrlRX.onStart(5, 9);
-//         else mTimeCtrlRX.onStop();
-//         //printf("UX+\r\n");
-//      };
+      if(oRXF1 != RXF1)
+      {
+         oRXF1 = RXF1;
+         if(RXF1 == true) mTimeCtrlRX.onStart(5, 9);
+         else mTimeCtrlRX.onStop();
+         printf("USART_RX+\r\n");
+      };
 
 //      if(mBuffUART.onCheck())
 //      {

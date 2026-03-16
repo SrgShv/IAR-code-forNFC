@@ -238,15 +238,16 @@ void HAL_UART_TxHalfCpltCallback(UART_HandleTypeDef *huart)
 CPortM::CPortM() :
    m_buffTX(0),
    m_buffRX(0),
-   m_RxPackLen(USART_DMA_BFF_LEN/2),               // 8 BYTE
+   m_RxPackLen(USART_DMA_BFF_LEN),               // 8 BYTE
    m_delayTX(0),
-   last(0)
+   lastPos(0),
+   buffSize(USART_DMA_BFF_LEN)
 {
    m_buffTX = new uint8_t[USART_DMA_BFF_LEN];      // 64 BYTE
    m_buffRX = new uint8_t[USART_DMA_BFF_LEN];      // 64 BYTE
    pBuffRX_MA = (uint8_t *)&(m_buffRX[0]);
    pBuffRX_MB = (uint8_t *)&(m_buffRX[m_RxPackLen]);
-   sz = 64;
+   //sz = USART_DMA_BFF_LEN;
 }
 
 CPortM::~CPortM()
@@ -297,31 +298,37 @@ bool CPortM::onRead(uint8_t *data, uint16_t &len)
 {
    ///if(HAL_UART_Receive(&huart2, m_buffRX, len, 100) == HAL_OK) return true;
    ///return false;
-   
-   uint16_t pos = sz - DMA1_Stream5->NDTR;
-   if(pos == last) return false;
-   
-   printf("RX: sz=%d, NDTR=%d\n", sz, DMA1_Stream5->NDTR);
-   if(pos > last)
+   uint16_t cnt = 0;
+   uint16_t nextPos = buffSize - DMA1_Stream5->NDTR;
+   //printf("NDTR:%d\n", (int)DMA1_Stream5->NDTR);
+   if(nextPos == lastPos) 
    {
-      data = &buf[last];
-      len = pos - last;
-      last = pos;
-      ///printf("File %s on line %d\r\n", file, line);
-      printf("ModbusRX: pos=%d, len=%d\n", pos, len);
-      for (int i = 0; i < len; i++)
+      len = 0;
+      return false;
+   };
+
+   if(nextPos > lastPos)
+   {
+      cnt = 0;
+      len = nextPos - lastPos;
+      for(int16_t i=lastPos; i<(lastPos+len); i++)
       {
-         printf("0x%02X, ", (int)data[i]);
+         data[cnt++] = m_buffRX[i];
       };
-      printf("\r\n");
-      
+      lastPos = nextPos;    
       return true;
-   }
-   else
+   };
+   
+   if(nextPos < lastPos)
    {
-      data = &buf[last];
-      len = sz - last;
-      last = 0;
+      cnt = 0;
+      len = buffSize + nextPos - lastPos;
+      for(int16_t i=lastPos; i<(lastPos+len); i++)
+      {
+         if(i >= buffSize) i = 0;
+         data[cnt++] = m_buffRX[i];
+      };
+      lastPos = nextPos;
       return true;
    };
 }

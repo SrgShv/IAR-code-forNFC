@@ -29,7 +29,7 @@ extern "C" {
 #pragma once
 #include "main.h"
    
-#define USART_RX_BUFFER_SIZE     32
+#define USART_RX_BUFFER_SIZE     64
 
 extern UART_HandleTypeDef huart2;
 void MX_USART2_UART_Init(void);
@@ -67,8 +67,9 @@ private:
    
    DMA_Stream_TypeDef* dma;
    uint8_t* buf;
-   uint16_t sz;
-   uint16_t last;
+   const uint16_t buffSize;
+   uint16_t lastPos;
+   uint16_t nextPos;
 };
 
 class CByteBuff
