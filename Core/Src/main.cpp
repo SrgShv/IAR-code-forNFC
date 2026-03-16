@@ -969,44 +969,48 @@ int main(void)
    {
       /*********************************************************************/
       /** RX PIN USART2 STATUS CONTROL                                     */
-      if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_2))
-      {
-         if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_3)) // if USART PIN:PA3 RX DATA
-         {
-            if(RXF1 == false) RXF1 = true;
-         };
-      };
+//      if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_2))
+//      {
+//         if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_3)) // if USART PIN:PA3 RX DATA
+//         {
+//            if(RXF1 == false) RXF1 = true;
+//         };
+//      };
 
-      /** RX PIN USART2 STATUS CONTROL                                     */
-      /*********************************************************************/
+      /**
+         runtime control of the DMA USART RX status
+      */
       while(pPortMB->onRead(MBRrx, MBRlen))
       {
          if(MBRlen > 0)
          {
             pBuffMB->onAddData(MBRrx, MBRlen);
-            //printf("ModbusRX: len=%d\n", MBRlen);
-//            for (int i = 0; i < MBRlen; i++)
-//            {
-//               printf("0x%02X, \n\r", (int)MBRrx[i]);
-//            };
             pTimeEnRS485->onStart(2, 2);
-            //printf("\r");
-            //MBRlen = 0;
          };
       };
       
+      /**
+         timeout pause of the end serial RX
+      */
       if(pTimeEnRS485->onIsTimeOut())
       {
          if(pBuffMB->onCheck())
          {
             pBuffMB->onCopyRX(rxBuffMBR, rxLenBuffMBR);
          };
-         //printf("<-->\n\r");
          pTimeEnRS485->onStop();
          printf("ModbusRX: len=%d\n", rxLenBuffMBR);
          for (int i = 0; i < rxLenBuffMBR; i++)
          {
             printf("0x%02X, \n\r", (int)rxBuffMBR[i]);
+         };
+         
+         /** 
+            parse RX from RS485, 0 delay 
+         */
+         if(ParseModbusRX(rxBuffMBR, rxLenBuffMBR))
+         {
+            SysResetCounter = 0;
          };
          pBuffMB->onClear();
       };
