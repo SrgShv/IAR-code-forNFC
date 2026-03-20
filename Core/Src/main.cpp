@@ -265,10 +265,20 @@ void tickTimer(void)
 void onEnableTxRS485(uint32_t delay)
 {
    onEnablePinTxRS485(true);
-   onStartTimer2(delay);
+   //onStartTimer2(delay);
 //   onEnablePinTxRS485(true);
 //   pTimeEnRS485->onStart(delay, 2);
 }
+/**************************************************************************/
+
+/**************************************************************************/
+//void onEnableTxRS485(uint32_t delay)
+//{
+//   onEnablePinTxRS485(true);
+//   onStartTimer2(delay);
+////   onEnablePinTxRS485(true);
+////   pTimeEnRS485->onStart(delay, 2);
+//}
 /**************************************************************************/
 
 /**************************************************************************/

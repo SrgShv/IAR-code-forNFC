@@ -57,6 +57,7 @@ uint8_t *pBuffRX_MA = 0;
 uint8_t *pBuffRX_MB = 0;
 volatile bool USART_RXA = false;
 volatile bool USART_RXB = false;
+volatile bool USART_TX_BUSY = false;
 
 void MX_USART2_UART_Init(void)
 {
@@ -217,6 +218,8 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
    }
    else if(huart->Instance == USART2)
    {
+      onStartTimer2(2);
+      USART_TX_BUSY = false;
       printf("==TXC\n\r");
       //assert_failed((uint8_t *)__FILE__, __LINE__);
    };
@@ -229,7 +232,7 @@ void HAL_UART_TxHalfCpltCallback(UART_HandleTypeDef *huart)
    }
    else if(huart->Instance == USART2)
    {
-      printf("--TXH\n\r");
+      //printf("--TXH\n\r");
       //assert_failed((uint8_t *)__FILE__, __LINE__);
    };
 }
@@ -277,18 +280,29 @@ void CPortM::onInit(void)
       //assert_failed((uint8_t *)__FILE__, __LINE__);
    };
 }
-//#define MIFAREDEBUG
+//#define MIFAREDEBUG 
 void CPortM::onSend(uint8_t *data, uint16_t len)
 {
-   if (huart2.gState != HAL_UART_STATE_READY)
+   if(huart2.gState != HAL_UART_STATE_READY)
    {
        // НЕ запускати DMA
       printf("++TX DMA NOT READY!!!\r\n");
    }
+   else if(USART_TX_BUSY == true)
+   {
+       // НЕ запускати DMA
+      printf("++TX DMA BUSY!!!\r\n");
+   }
    else
    {
-      m_delayTX = ((uint32_t)len * 1200000) / onGetUART_BPS();
-      onEnableTxRS485(m_delayTX);
+      USART_TX_BUSY = true;
+      ///m_delayTX = ((uint32_t)len * 1200000) / onGetUART_BPS();
+      
+      /**
+      set permition for EnableTx485_Pin ON
+      & start timer2 for delay OFF: 0.1 msec * m_delayTX
+      */
+      onEnableTxRS485(0);
       for(uint16_t i=0; i<len; i++)
       {
          m_buffTX[i] = data[i];
