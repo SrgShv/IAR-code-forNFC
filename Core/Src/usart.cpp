@@ -115,7 +115,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
       hdma_usart2_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
       hdma_usart2_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
       hdma_usart2_tx.Init.Mode = DMA_NORMAL;
-      hdma_usart2_tx.Init.Priority = DMA_PRIORITY_LOW;
+      hdma_usart2_tx.Init.Priority = DMA_PRIORITY_HIGH;
       hdma_usart2_tx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
       if (HAL_DMA_Init(&hdma_usart2_tx) != HAL_OK)
       {
@@ -123,6 +123,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
       }
 
       __HAL_LINKDMA(uartHandle,hdmatx,hdma_usart2_tx);
+      //__HAL_LINKDMA(&huart2,hdmatx,hdma_usart2_tx);
 
       /* USART2_RX Init */
       hdma_usart2_rx.Instance = DMA1_Stream5;
@@ -151,8 +152,10 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
       HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);
 
       /* USART2 interrupt Init */
-      ///HAL_NVIC_SetPriority(USART2_IRQn, 1, 3);
-      ///HAL_NVIC_EnableIRQ(USART2_IRQn);
+      HAL_NVIC_SetPriority(USART2_IRQn, 1, 3);
+      HAL_NVIC_EnableIRQ(USART2_IRQn);
+      
+      //__HAL_DMA_DISABLE_IT(&hdma_usart2_tx, DMA_IT_HT);
 
       ///__HAL_UART_ENABLE_IT(&huart2, UART_IT_ERR);        // Активує переривання для помилок
       ///__HAL_UART_ENABLE_IT(&huart2, UART_IT_RXNE);       // Для отримання даних
@@ -214,6 +217,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
    }
    else if(huart->Instance == USART2)
    {
+      printf("==TXC\n\r");
       //assert_failed((uint8_t *)__FILE__, __LINE__);
    };
 }
@@ -225,6 +229,7 @@ void HAL_UART_TxHalfCpltCallback(UART_HandleTypeDef *huart)
    }
    else if(huart->Instance == USART2)
    {
+      printf("--TXH\n\r");
       //assert_failed((uint8_t *)__FILE__, __LINE__);
    };
 }
@@ -275,14 +280,24 @@ void CPortM::onInit(void)
 //#define MIFAREDEBUG
 void CPortM::onSend(uint8_t *data, uint16_t len)
 {
-   m_delayTX = ((uint32_t)len * 1200000) / onGetUART_BPS();
-   onEnableTxRS485(m_delayTX);
-   for(uint16_t i=0; i<len; i++)
+   if (huart2.gState != HAL_UART_STATE_READY)
    {
-      m_buffTX[i] = data[i];
-   };
-   huart2.gState = HAL_UART_STATE_READY;
-   HAL_UART_Transmit_DMA(&huart2, m_buffTX, len);
+       // НЕ запускати DMA
+      printf("++TX DMA NOT READY!!!\r\n");
+   }
+   else
+   {
+      m_delayTX = ((uint32_t)len * 1200000) / onGetUART_BPS();
+      onEnableTxRS485(m_delayTX);
+      for(uint16_t i=0; i<len; i++)
+      {
+         m_buffTX[i] = data[i];
+      };
+      //huart2.gState = HAL_UART_STATE_READY;
+      if(HAL_UART_Transmit_DMA(&huart2, m_buffTX, len))
+      {
+         printf("++TX DMA ERROR\r\n");
+      };
 
 #ifdef MIFAREDEBUG
       printf("ModbusTX: ");
@@ -292,6 +307,7 @@ void CPortM::onSend(uint8_t *data, uint16_t len)
       };
       printf("\r\n");
 #endif
+   };
 }
 
 bool CPortM::onRead(uint8_t *data, uint16_t &len)
