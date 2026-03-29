@@ -259,7 +259,7 @@ void tickTimer(void)
    mTimeCtrlRX.onTick();
    mTimeResetUSART.onTick();
    //if(++SysTimerCounter > 3600000) SystemReset();   // Time reset - 10 min
-   ticChronometr();
+   //ticChronometr();
 }
 /**************************************************************************/
 

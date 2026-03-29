@@ -26,30 +26,8 @@ UART_HandleTypeDef huart2;
 DMA_HandleTypeDef hdma_usart2_tx;
 DMA_HandleTypeDef hdma_usart2_rx;
 
-/**
-settings:
-         USART:
-            Mode: DMA Circular
-            UART global interrupt: DISABLE
-         DMA:
-            Circular
-            Memory Increment ENABLE
-            Peripheral Increment DISABLE
-
-buffer:  __attribute__((aligned(32)))
-         uint8_t uart1_dma[1024];
-
-start:   HAL_UART_Receive_DMA(&huart2, buffer, 1024);
-         __IO uint32_t NDTR;
-         DMA1_Stream5->NDTR
-*/
-
-//extern CByteBuff *pBuffMB;
 extern CPortM *pPortMB;
 extern CBuffUART *pBuffUART;
-//extern bool checkBusyRS485(void);
-//extern CTimeOut *pTimeActiveRX;
-//extern CTimeOut *pTimeEnRS485;
 extern void onStartTimer2(uint32_t time);
 
 #define USART_DMA_BFF_LEN     64
@@ -82,14 +60,6 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
    {
       /* DMA controller clock enable */
       __HAL_RCC_DMA1_CLK_ENABLE();
-
-//      /* DMA interrupt init */
-//      /* DMA1_Stream5_IRQn interrupt configuration */
-//      HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 0, 1);
-//      HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);
-//      /* DMA1_Stream6_IRQn interrupt configuration */
-//      HAL_NVIC_SetPriority(DMA1_Stream6_IRQn, 3, 0);
-//      HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);
 
       /* USART2 clock enable */
       __HAL_RCC_USART2_CLK_ENABLE();
@@ -154,29 +124,19 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
 
       __HAL_UART_ENABLE_IT(&huart2, UART_IT_ERR);        // Активує переривання для помилок
       __HAL_UART_ENABLE_IT(&huart2, UART_IT_RXNE);       // Для отримання даних
-
       __HAL_DMA_ENABLE_IT(&hdma_usart2_rx, DMA_IT_TE);   // Помилка передачі
-      __HAL_DMA_ENABLE_IT(&hdma_usart2_rx, DMA_IT_HT);   // Половинне завершення
       __HAL_DMA_ENABLE_IT(&hdma_usart2_rx, DMA_IT_TC);   // Завершення передачі
 
       /* USART2 interrupt Init */
       HAL_NVIC_SetPriority(USART2_IRQn, 1, 3);
       HAL_NVIC_EnableIRQ(USART2_IRQn);
-
+      //__HAL_DMA_ENABLE_IT(&hdma_usart2_rx, DMA_IT_HT);   // Половинне завершення
       //__HAL_DMA_DISABLE_IT(&hdma_usart2_tx, DMA_IT_HT);
-
-      ///__HAL_UART_ENABLE_IT(&huart2, UART_IT_ERR);        // Активує переривання для помилок
-      ///__HAL_UART_ENABLE_IT(&huart2, UART_IT_RXNE);       // Для отримання даних
-
-      ///__HAL_DMA_ENABLE_IT(&hdma_usart2_rx, DMA_IT_TE);   // Помилка передачі
-      ///__HAL_DMA_ENABLE_IT(&hdma_usart2_rx, DMA_IT_HT);   // Половинне завершення
-      ///__HAL_DMA_ENABLE_IT(&hdma_usart2_rx, DMA_IT_TC);   // Завершення передачі
    }
 }
 
 void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 {
-
   if(uartHandle->Instance==USART2)
   {
     /* Peripheral clock disable */
@@ -225,9 +185,11 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
    }
    else if(huart->Instance == USART2)
    {
+      /**
+      start timer2 for delay OFF: 0.1 msec * m_delayTX
+      */
       onStartTimer2(2);
       USART_TX_BUSY = false;
-      //printf("==TXC\n\r");
       //assert_failed((uint8_t *)__FILE__, __LINE__);
    };
 }
@@ -239,15 +201,8 @@ void HAL_UART_TxHalfCpltCallback(UART_HandleTypeDef *huart)
    }
    else if(huart->Instance == USART2)
    {
-      //printf("--TXH\n\r");
-      //assert_failed((uint8_t *)__FILE__, __LINE__);
    };
 }
-
-// ================ classes =================
-//#define USART_DMA_BFF_LEN     256
-//uint8_t *pBuffRX_MA = 0;
-//uint8_t *pBuffRX_MB = 0;
 
 /** ======= main USART COM PORT for RS485 =======*/
 CPortM::CPortM() :
