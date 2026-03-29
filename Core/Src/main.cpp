@@ -226,6 +226,8 @@ volatile uint32_t timeCnt3 = 0;
 void tickTimer2(void)
 {
    onEnablePinTxRS485(false);
+   //checkChronometr((uint32_t)__LINE__);
+   //Chronometr(false);
 //   printf("T2!!!\r\n");
 //   if(timeCnt3 >= 10000)
 //   {
@@ -257,7 +259,7 @@ void tickTimer(void)
    mTimeCtrlRX.onTick();
    mTimeResetUSART.onTick();
    //if(++SysTimerCounter > 3600000) SystemReset();   // Time reset - 10 min
-   //ticChronometr();
+   ticChronometr();
 }
 /**************************************************************************/
 
@@ -833,7 +835,7 @@ bool ParseModbusRX(uint8_t *data, uint16_t len)/****<== PARSE - PARSE ==>****/
    /** Check Modbus packet */
    if(data[0] == devNumber)
    {
-      //Chronometr(true);
+//      checkChronometr((uint32_t)__LINE__);
       if(onCheckRqCRC16(data, len))
       {
          res = true;
@@ -923,6 +925,17 @@ void Chronometr(bool start)
    };
 }
 /**************************************************************************/
+
+/**************************************************************************/
+void checkChronometr(uint32_t line)
+{
+   if(ttFlg == true)
+   {
+      printf("%d: Chrono: %d msec\r\n", line, timeCounter);
+   };
+}
+/**************************************************************************/
+
 /**************************************************************************/
 void ticChronometr(void)
 {
@@ -996,9 +1009,11 @@ int main(void)
          {
             pBuffMB->onAddData(MBRrx, MBRlen);
             pTimeEnRS485->onStart(2, 2);
+            //Chronometr(true);
+            //checkChronometr((uint32_t)__LINE__);
          };
       };
-      
+
       /**
          timeout pause of the end serial RX
       */
@@ -1009,14 +1024,14 @@ int main(void)
             pBuffMB->onCopyRX(rxBuffMBR, rxLenBuffMBR);
          };
          pTimeEnRS485->onStop();
-         printf("ModbusRX: len=%d\n", rxLenBuffMBR);
-         for (int i = 0; i < rxLenBuffMBR; i++)
-         {
-            printf("0x%02X, \n\r", (int)rxBuffMBR[i]);
-         };
-         
-         /** 
-            parse RX from RS485, 0 delay 
+//         printf("ModbusRX: len=%d\n", rxLenBuffMBR);
+//         for (int i = 0; i < rxLenBuffMBR; i++)
+//         {
+//            printf("0x%02X, \n\r", (int)rxBuffMBR[i]);
+//         };
+
+         /**
+            parse RX from RS485, 0 delay
          */
          if(ParseModbusRX(rxBuffMBR, rxLenBuffMBR))
          {
@@ -1039,7 +1054,7 @@ int main(void)
 //         pPortMB->onSetRX(16);
 //         if(RXF1 == true) RXF1 = false;
 //      };
-      
+
 //      if(oRXF1 != RXF1)
 //      {
 //         oRXF1 = RXF1;
@@ -1082,6 +1097,15 @@ int main(void)
 #ifdef  WATCH_DOG_ENABLED
          resetWDT();
 #endif
+
+//         while(pPortMB->onRead(MBRrx, MBRlen))
+//         {
+//            if(MBRlen > 0)
+//            {
+//               pBuffMB->onAddData(MBRrx, MBRlen);
+//               pTimeEnRS485->onStart(2, 2);
+//            };
+//         };
 
          /********************************************/
          /**     for drive pin enable RED LED OFF    */
@@ -1292,6 +1316,7 @@ void onMakeResponseMBR(void)
       if(timeRT3 > 0) --timeRT3;
       else
       {
+//         checkChronometr((uint32_t)__LINE__);
          pModbus->onRespREG(mTxRegPTR.devAddr, mTxRegPTR.dataReg, mTxRegPTR.len);
          step_MBR03 = 0;
       };
@@ -1303,6 +1328,7 @@ void onMakeResponseMBR(void)
       timeRT4 = delayResponseMBR;
       if(timeRT4 > 0) --timeRT4;
       ++step_MBR06;
+//      checkChronometr((uint32_t)__LINE__);
    }
    else if(step_MBR06 == 2)
    {

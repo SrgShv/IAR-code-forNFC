@@ -135,7 +135,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
       hdma_usart2_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
       hdma_usart2_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
       hdma_usart2_rx.Init.Mode = DMA_CIRCULAR;
-      hdma_usart2_rx.Init.Priority = DMA_PRIORITY_LOW;
+      hdma_usart2_rx.Init.Priority = DMA_PRIORITY_HIGH;
       hdma_usart2_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
       if (HAL_DMA_Init(&hdma_usart2_rx) != HAL_OK)
       {
@@ -152,10 +152,17 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
       HAL_NVIC_SetPriority(DMA1_Stream6_IRQn, 1, 2);
       HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);
 
+      __HAL_UART_ENABLE_IT(&huart2, UART_IT_ERR);        // Активує переривання для помилок
+      __HAL_UART_ENABLE_IT(&huart2, UART_IT_RXNE);       // Для отримання даних
+
+      __HAL_DMA_ENABLE_IT(&hdma_usart2_rx, DMA_IT_TE);   // Помилка передачі
+      __HAL_DMA_ENABLE_IT(&hdma_usart2_rx, DMA_IT_HT);   // Половинне завершення
+      __HAL_DMA_ENABLE_IT(&hdma_usart2_rx, DMA_IT_TC);   // Завершення передачі
+
       /* USART2 interrupt Init */
       HAL_NVIC_SetPriority(USART2_IRQn, 1, 3);
       HAL_NVIC_EnableIRQ(USART2_IRQn);
-      
+
       //__HAL_DMA_DISABLE_IT(&hdma_usart2_tx, DMA_IT_HT);
 
       ///__HAL_UART_ENABLE_IT(&huart2, UART_IT_ERR);        // Активує переривання для помилок
@@ -220,7 +227,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
    {
       onStartTimer2(2);
       USART_TX_BUSY = false;
-      printf("==TXC\n\r");
+      //printf("==TXC\n\r");
       //assert_failed((uint8_t *)__FILE__, __LINE__);
    };
 }
@@ -280,7 +287,7 @@ void CPortM::onInit(void)
       //assert_failed((uint8_t *)__FILE__, __LINE__);
    };
 }
-//#define MIFAREDEBUG 
+//#define MIFAREDEBUG
 void CPortM::onSend(uint8_t *data, uint16_t len)
 {
    if(huart2.gState != HAL_UART_STATE_READY)
@@ -297,17 +304,18 @@ void CPortM::onSend(uint8_t *data, uint16_t len)
    {
       USART_TX_BUSY = true;
       ///m_delayTX = ((uint32_t)len * 1200000) / onGetUART_BPS();
-      
+
       /**
       set permition for EnableTx485_Pin ON
       & start timer2 for delay OFF: 0.1 msec * m_delayTX
       */
-      onEnableTxRS485(0);
+
       for(uint16_t i=0; i<len; i++)
       {
          m_buffTX[i] = data[i];
       };
-      //huart2.gState = HAL_UART_STATE_READY;
+      onEnableTxRS485(0);
+//      //huart2.gState = HAL_UART_STATE_READY;
       if(HAL_UART_Transmit_DMA(&huart2, m_buffTX, len))
       {
          printf("++TX DMA ERROR\r\n");
@@ -326,41 +334,47 @@ void CPortM::onSend(uint8_t *data, uint16_t len)
 
 bool CPortM::onRead(uint8_t *data, uint16_t &len)
 {
-   ///if(HAL_UART_Receive(&huart2, m_buffRX, len, 100) == HAL_OK) return true;
-   ///return false;
-   uint16_t cnt = 0;
-   uint16_t nextPos = buffSize - DMA1_Stream5->NDTR;
-   //printf("NDTR:%d\n", (int)DMA1_Stream5->NDTR);
-   if(nextPos == lastPos) 
+   if(USART_TX_BUSY == false)
    {
-      len = 0;
-      return false;
+      uint16_t cnt = 0;
+      uint16_t nextPos = buffSize - DMA1_Stream5->NDTR;
+      //printf("NDTR:%d\n", (int)DMA1_Stream5->NDTR);
+      if(nextPos == lastPos)
+      {
+         len = 0;
+         //printf("<0-0\n\r");
+         return false;
+      };
+
+      if(nextPos > lastPos)
+      {
+         cnt = 0;
+         len = nextPos - lastPos;
+         for(int16_t i=lastPos; i<(lastPos+len); i++)
+         {
+            data[cnt++] = m_buffRX[i];
+         };
+         lastPos = nextPos;
+         //printf("<=\n\r");
+         return true;
+      };
+
+      if(nextPos < lastPos)
+      {
+         cnt = 0;
+         len = buffSize + nextPos - lastPos;
+         for(int16_t i=lastPos; i<(lastPos+len); i++)
+         {
+            if(i >= buffSize) i = 0;
+            data[cnt++] = m_buffRX[i];
+         };
+         lastPos = nextPos;
+         //printf("<=.=\n\r");
+         return true;
+      };
    };
 
-   if(nextPos > lastPos)
-   {
-      cnt = 0;
-      len = nextPos - lastPos;
-      for(int16_t i=lastPos; i<(lastPos+len); i++)
-      {
-         data[cnt++] = m_buffRX[i];
-      };
-      lastPos = nextPos;    
-      return true;
-   };
-   
-   if(nextPos < lastPos)
-   {
-      cnt = 0;
-      len = buffSize + nextPos - lastPos;
-      for(int16_t i=lastPos; i<(lastPos+len); i++)
-      {
-         if(i >= buffSize) i = 0;
-         data[cnt++] = m_buffRX[i];
-      };
-      lastPos = nextPos;
-      return true;
-   };
+   return false;
 }
 
 void CPortM::onSetRX(uint16_t RxPackLen)
@@ -385,7 +399,7 @@ void CPortM::onClearFlgRX(void)
 //   __HAL_DMA_DISABLE(&hdma_usart2_rx);
    __HAL_DMA_CLEAR_FLAG(&hdma_usart2_rx, DMA_FLAG_TCIF0_4);
    __HAL_DMA_CLEAR_FLAG(&hdma_usart2_rx, DMA_FLAG_HTIF0_4);
-   
+
    this->onSetRX(USART_RX_BUFFER_SIZE);
 }
 
@@ -602,7 +616,7 @@ bool CBuffUART::onRead(uint8_t *data, uint16_t &len)
 }
 
 /**----------------------------------------------------**/
-//#define USART_ERROR_PRINT
+#define USART_ERROR_PRINT
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
    if(huart->Instance == USART2)
@@ -611,8 +625,8 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
       printf("USART Error!!!\r\n");
       printFlagsUSART();
 #endif // USART_ERROR_PRINT
-      pBuffUART->onClear();
-      pPortMB->onClearFlgRX();
+      //pBuffUART->onClear();
+      //pPortMB->onClearFlgRX();
    };
 }
 

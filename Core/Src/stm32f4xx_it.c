@@ -273,7 +273,17 @@ void SPI1_IRQHandler(void)
   */
 void USART2_IRQHandler(void)
 {
-   HAL_UART_IRQHandler(&huart2);
+  //if (__HAL_UART_GET_FLAG(&huart2, UART_FLAG_TC))
+  //{
+    //__HAL_UART_CLEAR_FLAG(&huart2, UART_FLAG_TC);
+    //printf("Tx RS485 finished\n\r");
+    // ✔ ФІЗИЧНО все передано
+    //DE = 0;
+    //RE = 0;
+
+    //__HAL_UART_DISABLE_IT(&huart2, UART_IT_TC);
+  //};
+  HAL_UART_IRQHandler(&huart2);
    //assert_failed((uint8_t *)__FILE__, __LINE__);
 }
 

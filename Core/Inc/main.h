@@ -216,6 +216,7 @@ extern uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len);
 //extern int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len);
 
 void Chronometr(bool start);
+void checkChronometr(uint32_t line);
 void ticChronometr(void);
 
 //bool checkBusyRS485(void);
