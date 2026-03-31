@@ -259,7 +259,7 @@ void tickTimer(void)
    mTimeCtrlRX.onTick();
    mTimeResetUSART.onTick();
    //if(++SysTimerCounter > 3600000) SystemReset();   // Time reset - 10 min
-   //ticChronometr();
+   ticChronometr();
 }
 /**************************************************************************/
 
@@ -267,9 +267,6 @@ void tickTimer(void)
 void onEnableTxRS485(uint32_t delay)
 {
    onEnablePinTxRS485(true);
-   //onStartTimer2(delay);
-//   onEnablePinTxRS485(true);
-//   pTimeEnRS485->onStart(delay, 2);
 }
 /**************************************************************************/
 
@@ -966,7 +963,7 @@ void onOrderUID(uint8_t time)
 /**************************************************************************/
 /** MAIN MAIN MAIN MAIN MAIN MAIN MAIN MAIN MAIN MAIN MAIN MAIN MAIN MAIN */
 //#define DEFINE_OBJECT_SIZE
-#define MIFARE_RQ_TIMEOUT     100
+#define MIFARE_RQ_TIMEOUT     1000
 static volatile bool RXF1 = false;
 static volatile bool oRXF1 = false;
 static volatile bool rxPIN = false;
@@ -1140,7 +1137,7 @@ int main(void)
          /**    Start scan PN532 for Mifare Card     */
          if(pTimeCardT->onIsTimeOut())
          {
-            step_NFC = 1;
+            if(step_NFC == 0) step_NFC = 1;
             pTimeCardT->onStop();
          };
          /********************************************/
@@ -1258,41 +1255,41 @@ void onReadMifareNFC(void)
 {
    switch(step_NFC)
    {
-   case 1:
+   case 1:              /** start time = 0 msec */
       onSetChipSel(true);
       ++step_NFC;
       break;
-   case 2:
+   case 2:              /** time = 1 msec */
       writecommandSH(tdat, 3); // 0x4A; 0x01; 0x00;
       ++step_NFC;
       break;
-   case 3:
+   case 3:              /** time = 2 msec */
       onSetChipSel(false);
       timeOut_1 = 0;
       ++step_NFC;
       break;
-   case 4:
+   case 4:              /** time = 3 msec */
       if(isready()) ++step_NFC;
-      else if(++timeOut_1 > MIFARE_RQ_TIMEOUT) step_NFC = 0;
+      else if(++timeOut_1 > 10) step_NFC = 0;
       break;
-   case 5:
+   case 5:              /** time = 4 msec */
       if(readack()) ++step_NFC;
-      else if(++timeOut_1 > MIFARE_RQ_TIMEOUT) step_NFC = 0;
+      else if(++timeOut_1 > 10) step_NFC = 0;
       break;
-   case 6:
+   case 6:              /** time = 5....26 msec */
       if(isready()) ++step_NFC;
-      else if(++timeOut_1 > MIFARE_RQ_TIMEOUT) step_NFC = 0;
+      else if(++timeOut_1 > 100) step_NFC = 0;
       break;
-   case 7:
+   case 7:              /** time = 27 msec */
       onSetChipSel(true);
       ++step_NFC;
       break;
-   case 8:
+   case 8:              /** time = 28 msec */
       readdataSH(rdat, 24);
       if(parseRxUID(rdat, 24)) pTimeOutNFC->onStart(2500, 1);
       ++step_NFC;
       break;
-   case 9:
+   case 9:              /** time = 29 msec */
       onSetChipSel(false);
       step_NFC = 0;
       break;
