@@ -396,8 +396,8 @@ void ParseRxUSB(void)                        /****<== PARSE - PARSE ==>****/
                HAL_Delay(100);
                pFlashM->onWriteProtect(1);
                pFlashM->onInit();
-               //SystemReset();
-               SystemResetD((char *)__FILE__, __LINE__);
+               SystemReset();
+               //SystemResetD((char *)__FILE__, __LINE__);
             };
          };
       }
@@ -1021,11 +1021,6 @@ int main(void)
             pBuffMB->onCopyRX(rxBuffMBR, rxLenBuffMBR);
          };
          pTimeEnRS485->onStop();
-//         printf("ModbusRX: len=%d\n", rxLenBuffMBR);
-//         for (int i = 0; i < rxLenBuffMBR; i++)
-//         {
-//            printf("0x%02X, \n\r", (int)rxBuffMBR[i]);
-//         };
 
          /**
             parse RX from RS485, 0 delay
@@ -1036,39 +1031,6 @@ int main(void)
          };
          pBuffMB->onClear();
       };
-
-//      if(USART_RXA)                    /** <= HAL_UART_RxHalfCpltCallback **/
-//      {
-//         USART_RXA = false;
-//         mBuffUART.onWrite(pBuffRX_MA, 8);   // copy from pBuffRX_MA -> to mBuffUART.m_Buff[][]
-//         if(RXF1 == true) RXF1 = false;
-//      };
-
-//      if(USART_RXB)                    /** <= HAL_UART_RxCpltCallback **/
-//      {
-//         USART_RXB = false;
-//         mBuffUART.onWrite(pBuffRX_MB, 8);   // copy from pBuffRX_MA -> to mBuffUART.m_Buff[][]
-//         pPortMB->onSetRX(16);
-//         if(RXF1 == true) RXF1 = false;
-//      };
-
-//      if(oRXF1 != RXF1)
-//      {
-//         oRXF1 = RXF1;
-//         if(RXF1 == true) mTimeCtrlRX.onStart(5, 9);
-//         else mTimeCtrlRX.onStop();
-//         printf("USART_RX+\r\n");
-//      };
-
-//      if(mBuffUART.onCheck())
-//      {
-//         mBuffUART.onDirectRead(pD);
-//         /** parse RX from RS485, 0 delay **/
-//         if(ParseModbusRX(pD.data, *pD.byteCount))
-//         {
-//            SysResetCounter = 0;
-//         };
-//      };
 
 //      if(mTimeCtrlRX.onIsTimeOut())
 //      {
@@ -1386,10 +1348,7 @@ void SystemClock_Config(void)
 /*****************************************************************************/
 void SystemResetD(char * file, int line)
 {
-   //initFlag = false;
-   //pEthernet->m_pLanA->enc28j60_soft_reset();
-   //pPortMB->onClearFlgRX();
-   //pPortMB->onDeInit();
+   __disable_irq();
    printf("RESET SYSTEM from: \n%s,\nline %d\r\n", file, line);
    delay_us(10000);
    NVIC_SystemReset();
@@ -1398,8 +1357,8 @@ void SystemResetD(char * file, int line)
 
 void SystemReset(void)
 {
-//   pPortMB->onDeInit();
-//   SPI1_MspDeInit();
+   __disable_irq();
+   delay_us(10000);
    NVIC_SystemReset();
 }
 
