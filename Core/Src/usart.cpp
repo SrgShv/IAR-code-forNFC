@@ -36,6 +36,7 @@ uint8_t *pBuffRX_MB = 0;
 volatile bool USART_RXA = false;
 volatile bool USART_RXB = false;
 volatile bool USART_TX_BUSY = false;
+static volatile bool USART_RX_BUSY = false;
 
 void MX_USART2_UART_Init(void)
 {
@@ -188,7 +189,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
       /**
       start timer2 for delay OFF: 0.1 msec * m_delayTX
       */
-      onStartTimer2(2);
+      onStartTimer2(4);
       USART_TX_BUSY = false;
       //assert_failed((uint8_t *)__FILE__, __LINE__);
    };
@@ -245,6 +246,11 @@ void CPortM::onInit(void)
 //#define MIFAREDEBUG
 void CPortM::onSend(uint8_t *data, uint16_t len)
 {
+   if(USART_RX_BUSY)
+   {
+      printf("TX USART unsuccessful - RX BUSY\r\n");
+      return;
+   };
    if(huart2.gState != HAL_UART_STATE_READY)
    {
        // НЕ запускати DMA
@@ -273,7 +279,11 @@ void CPortM::onSend(uint8_t *data, uint16_t len)
 //      //huart2.gState = HAL_UART_STATE_READY;
       if(HAL_UART_Transmit_DMA(&huart2, m_buffTX, len))
       {
-         printf("++TX DMA ERROR\r\n");
+         printf("TX DMA USART2 ERROR\r\n");
+      }
+      else
+      {
+         //printf("TX DMA USART2 OK\r\n");
       };
 
 #ifdef MIFAREDEBUG
@@ -330,6 +340,13 @@ bool CPortM::onRead(uint8_t *data, uint16_t &len)
    };
 
    return false;
+}
+
+void CPortM::onSetRxBusyFlg(bool flg)
+{
+   USART_RX_BUSY = flg;
+//   if(flg) printf("_|\n\r");
+//   else printf("|_\n\r");
 }
 
 void CPortM::onSetRX(uint16_t RxPackLen)
@@ -571,7 +588,7 @@ bool CBuffUART::onRead(uint8_t *data, uint16_t &len)
 }
 
 /**----------------------------------------------------**/
-#define USART_ERROR_PRINT
+//#define USART_ERROR_PRINT
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
    if(huart->Instance == USART2)

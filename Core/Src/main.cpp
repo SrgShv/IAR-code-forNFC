@@ -62,6 +62,8 @@ static volatile uint32_t timeRT4 = 0;
 
 static volatile uint32_t SysResetCounter = 0;
 static volatile uint32_t MB_CRC_ERR_cnt = 0;
+static volatile uint32_t NFC_ERR_cnt = 0;
+static volatile uint32_t USART_ERR_cnt = 0;
 
 
 #define  WATCH_DOG_ENABLED
@@ -85,7 +87,7 @@ CTimeOut mTimeOutNFC;
 CTimeOut mTimeEnRS485;
 CTimeOut mTimeCardT;
 //CTimeOut mTimeRespMBR;
-//CTimeOut mTimeActiveRX;
+CTimeOut mTimeActiveRX;
 CTimeOut mTimeCtrlRX;
 CTimeOut mTimeResetUSART;
 
@@ -96,7 +98,7 @@ CTimeOut *pTimeOutNFC = &mTimeOutNFC;
 CTimeOut *pTimeEnRS485 = &mTimeEnRS485;
 CTimeOut *pTimeCardT = &mTimeCardT;
 //CTimeOut *pTimeRespMBR = &mTimeRespMBR;
-//CTimeOut *pTimeActiveRX = &mTimeActiveRX;
+CTimeOut *pTimeActiveRX = &mTimeActiveRX;
 
 CBuffUART mBuffUART(8, 25);
 CBuffUART *pBuffUART = &mBuffUART;
@@ -249,7 +251,7 @@ void tickTimer(void)
    if(sysFlg == false) sysFlg = true;
    else sysFlg = false;
 
-   //pTimeActiveRX->onTick();
+   pTimeActiveRX->onTick();
    pTimeOutNFC->onTick();
    pTimeEnRS485->onTick();
    pTimeOutLEDR->onTick();
@@ -851,10 +853,13 @@ bool ParseModbusRX(uint8_t *data, uint16_t len)/****<== PARSE - PARSE ==>****/
             mTxRegPTR.devAddr = devNumber;
             mTxRegPTR.dataReg = (uint16_t*)&(MB_REGISTERS[pos]);
             mTxRegPTR.len = 0x00FF & (uint16_t)data[5];
-            pTimeOutLEDR->onStart(100, 3);
+            //pTimeOutLEDR->onStart(100, 3);
+            pTimeOutLEDR->onStart(20, 3);
             pTimeCardT->onStart(15, 5);
             onSetLedRED(true);
             step_MBR03 = 1;          /** start response Mjdbus TX, n-delay */
+            USART_ERR_cnt = 0;
+            //printf("rx mbr3\n\r");
          }
          else if(data[1] == 0x06)
          {
@@ -880,6 +885,8 @@ bool ParseModbusRX(uint8_t *data, uint16_t len)/****<== PARSE - PARSE ==>****/
                   //step_MBR06 = 1;
                };
                onOrderUID(tval);
+               USART_ERR_cnt = 0;
+               //printf("rx mbr6\n\r");
 #ifdef MODBUS_PRINTF1
                printf("relay time: %d, dev No. %d, reg addr: %d, data: 0x%04X\r\n",
                   (int)tval, (int)devNumber, (int)taddr, (int)tdata);
@@ -887,7 +894,8 @@ bool ParseModbusRX(uint8_t *data, uint16_t len)/****<== PARSE - PARSE ==>****/
             };
          };
       }
-      else if(++MB_CRC_ERR_cnt > 5) SystemResetD((char *)__FILE__, __LINE__);
+      else if(++MB_CRC_ERR_cnt > 10) SystemReset();
+      //else if(++MB_CRC_ERR_cnt > 5) SystemResetD((char *)__FILE__, __LINE__);
    };
    return res;
 }
@@ -987,15 +995,28 @@ int main(void)
 /**   START MAIN LOOP   START MAIN LOOP   START MAIN LOOP   START MAIN LOOP     */
    while(1)
    {
-      /*********************************************************************/
-      /** RX PIN USART2 STATUS CONTROL                                     */
-//      if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_2))
-//      {
-//         if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_3)) // if USART PIN:PA3 RX DATA
+      /*************************************************************/
+      /** RX PIN USART2 STATUS CONTROL = STATE RX                  */
+      if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_2))
+      {  /** if USART2 PIN:PA3 RX DATA   */
+         if(GPIO_PIN_RESET == HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_3))
+         {
+            if(pTimeActiveRX->onIsTimerOFF())
+            {
+               pPortMB->onSetRxBusyFlg(true);
+               pTimeActiveRX->onStart(2, 10);
+               if(++USART_ERR_cnt > 100) SystemReset();
+            };
+         };
+      }
+      else  /** RX PIN USART2 STATUS CONTROL = STATE TX            */
+      {
+//         if(RXF1 == true)
 //         {
-//            if(RXF1 == false) RXF1 = true;
+//            RXF1 = false;
+//            pPortMB->onSetRxBusyFlg(false);
 //         };
-//      };
+      };
 
       /**
          runtime control of the DMA USART RX status
@@ -1103,6 +1124,23 @@ int main(void)
             pTimeCardT->onStop();
          };
          /********************************************/
+         /** Start timeout Timer for USART2 RX PIN   */
+//         if(RXF1 == true)
+//         {
+//            if(pTimeActiveRX->onIsTimerOFF())
+//            {
+//               pTimeActiveRX->onStart(2, 10);
+//            };
+//         };
+
+         /********************************************/
+         /**    Timeout USART2 RX PIN                */
+         if(pTimeActiveRX->onIsTimeOut())
+         {
+            pTimeActiveRX->onStop();
+            pPortMB->onSetRxBusyFlg(false);
+            //if(RXF1 == true) RXF1 = false;
+         };
 
 /********************************************************************************/
 /**      START READ MIFARE UID from PN532                                       */
@@ -1218,6 +1256,7 @@ void onReadMifareNFC(void)
    switch(step_NFC)
    {
    case 1:              /** start time = 0 msec */
+      if(++NFC_ERR_cnt > 10) SystemReset();
       onSetChipSel(true);
       ++step_NFC;
       break;
@@ -1235,10 +1274,12 @@ void onReadMifareNFC(void)
       else if(++timeOut_1 > 10) step_NFC = 0;
       break;
    case 5:              /** time = 4 msec */
+      NFC_ERR_cnt = 0;
       if(readack()) ++step_NFC;
       else if(++timeOut_1 > 10) step_NFC = 0;
       break;
    case 6:              /** time = 5....26 msec */
+      NFC_ERR_cnt = 0;
       if(isready()) ++step_NFC;
       else if(++timeOut_1 > 100) step_NFC = 0;
       break;
@@ -1248,12 +1289,17 @@ void onReadMifareNFC(void)
       break;
    case 8:              /** time = 28 msec */
       readdataSH(rdat, 24);
+      /**        for Clear Register UID           */
       if(parseRxUID(rdat, 24)) pTimeOutNFC->onStart(2500, 1);
       ++step_NFC;
       break;
    case 9:              /** time = 29 msec */
       onSetChipSel(false);
-      step_NFC = 0;
+      timeOut_1 = 0;
+      ++step_NFC;
+      break;
+   case 10:             /** time = 49 msec */
+      if(++timeOut_1 > 20) step_NFC = 0;
       break;
    default:
       break;
@@ -1278,6 +1324,7 @@ void onMakeResponseMBR(void)
 //         checkChronometr((uint32_t)__LINE__);
          pModbus->onRespREG(mTxRegPTR.devAddr, mTxRegPTR.dataReg, mTxRegPTR.len);
          step_MBR03 = 0;
+         //printf("tx mbr3\n\r");
       };
    };
 /********************************************************************************/

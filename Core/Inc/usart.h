@@ -28,12 +28,12 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #pragma once
 #include "main.h"
-   
+
 #define USART_RX_BUFFER_SIZE     64
 
 extern UART_HandleTypeDef huart2;
 void MX_USART2_UART_Init(void);
-   
+
 #pragma pack(push,1)
 struct dPTR
 {
@@ -56,6 +56,7 @@ public:
    bool onRead(uint8_t *data, uint16_t &len);
    void onSetRX(uint16_t RxPackLen);
    uint16_t onGetRxLen(void);
+   void onSetRxBusyFlg(bool flg);
 protected:
     uint8_t *m_buffTX;
    uint8_t *m_buffRX;
@@ -64,7 +65,7 @@ private:
    uint8_t *m_CrcRX;
    uint16_t m_RxPackLen;
    uint32_t m_delayTX;
-   
+
    DMA_Stream_TypeDef* dma;
    uint8_t* buf;
    const uint16_t buffSize;
